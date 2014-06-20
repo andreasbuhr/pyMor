@@ -52,16 +52,15 @@ class VectorArrayInterface(BasicInterface):
 
     dim
         The dimension of the vectors in the array.
+    space
+        |VectorSpace| the array belongs to.
     '''
 
-    @abstractclassmethod
-    def empty(cls, dim, reserve=0):
-        '''Create an empty |VectorArray|
+    def empty(self, reserve=0):
+        '''Create an empty |VectorArray| of same dimension.
 
         Parameters
         ----------
-        dim
-            The dimension of the array.
         reserve
             Hint for the backend to which length the array will grow.
 
@@ -69,25 +68,22 @@ class VectorArrayInterface(BasicInterface):
         -------
         An empty |VectorArray|.
         '''
-        pass
+        return self.space.empty(reserve=reserve)
 
-    @abstractclassmethod
-    def zeros(cls, dim, count=1):
-        '''Create a |VectorArray| of null vectors
+    def zeros(self, count=1):
+        '''Create a |VectorArray| of null vectors of same dimension.
 
         Parameters
         ----------
-        dim
-            The dimension of the array.
         count
             The number of vectors.
 
         Returns
         -------
-        A |VectorArray| containing `count` vectors of dimension `dim`
-        whith each component zero.
+        A |VectorArray| containing `count` vectors whith each component
+        zero.
         '''
-        pass
+        return self.space.zeros(count=count)
 
     @abstractmethod
     def __len__(self):
@@ -96,6 +92,10 @@ class VectorArrayInterface(BasicInterface):
 
     @abstractproperty
     def dim(self):
+        pass
+
+    @abstractproperty
+    def space(self):
         pass
 
     @abstractmethod
@@ -468,3 +468,54 @@ class VectorArrayInterface(BasicInterface):
     def len_ind_unique(self, ind):
         '''Return the number of specified unique indices.'''
         return len(self) if ind is None else 1 if isinstance(ind, Number) else len(set(ind))
+
+
+class VectorSpaceInterface(BasicInterface):
+    '''Interface for vector spaces.
+
+    A vector space is simply the combination of a |VectorArray| type with a fixed
+    dimension.
+
+    Attributes
+    ----------
+    dim
+        The dimension of the vectors in the array.
+    type
+        The type of |VectorArrays| belonging to the space.
+    '''
+
+    @abstractmethod
+    def empty(cls, reserve=0):
+        '''Create an empty |VectorArray|
+
+        Parameters
+        ----------
+        reserve
+            Hint for the backend to which length the array will grow.
+
+        Returns
+        -------
+        An empty |VectorArray|.
+        '''
+        pass
+
+    @abstractmethod
+    def zeros(cls, count=1):
+        '''Create a |VectorArray| of null vectors
+
+        Parameters
+        ----------
+        count
+            The number of vectors.
+
+        Returns
+        -------
+        A |VectorArray| containing `count` vectors whith each component zero.
+        '''
+        pass
+
+    def __eq__(self, other):
+        return isinstance(other, VectorSpaceInterface) and other.type == self.type and self.dim == other.dim
+
+    def __ge__(self, other):
+        return isinstance(other, self.type) and self.dim == other.dim

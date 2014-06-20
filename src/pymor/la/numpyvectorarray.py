@@ -11,7 +11,7 @@ import numpy as np
 from scipy.sparse import issparse
 
 from pymor.core import NUMPY_INDEX_QUIRK
-from pymor.la.interfaces import VectorArrayInterface
+from pymor.la.interfaces import VectorArrayInterface, VectorSpaceInterface
 from pymor.tools import float_cmp
 
 
@@ -29,16 +29,15 @@ class NumpyVectorArray(VectorArrayInterface):
     be costly.
     '''
 
-    @classmethod
-    def empty(cls, dim, reserve=0):
-        va = cls(np.empty((0, 0)))
-        va._array = np.empty((reserve, dim))
+    # reimplement empty and zeros here for better performance
+    def empty(self, reserve=0):
+        va = NumpyVectorArray(np.empty((0, 0)))
+        va._array = np.empty((reserve, self.dim))
         va._len = 0
         return va
 
-    @classmethod
-    def zeros(cls, dim, count=1):
-        return cls(np.zeros((count, dim)))
+    def zeros(cls, count=1):
+        return NumpyVectorArray(np.zeros((count, self.dim)))
 
     def __init__(self, instance, dtype=None, copy=False, order=None, subok=False):
         if isinstance(instance, np.ndarray):
@@ -69,6 +68,10 @@ class NumpyVectorArray(VectorArrayInterface):
     @property
     def dim(self):
         return self._array.shape[1]
+
+    @property
+    def space(self):
+        return NumpyVectorSpace(self.dim)
 
     def copy(self, ind=None):
         assert self.check_ind(ind)
@@ -347,3 +350,27 @@ class NumpyVectorArray(VectorArrayInterface):
 
     def __repr__(self):
         return 'NumpyVectorArray({})'.format(self._array[:self._len].__str__())
+
+
+class NumpyVectorSpace(VectorSpaceInterface):
+
+    _spaces = {}
+
+    type = NumpyVectorArray
+
+    def __new__(cls, dim):
+        if dim in cls._spaces:
+            return cls._spaces[dim]
+        s = object.__new__(cls)
+        s.dim = dim
+        cls._spaces[dim] = s
+        return s
+
+    def empty(self, reserve=0):
+        va = NumpyVectorArray(np.empty((0, 0)))
+        va._array = np.empty((reserve, self.dim))
+        va._len = 0
+        return va
+
+    def zeros(cls, count=1):
+        return NumpyVectorArray(np.zeros((count, self.dim)))
