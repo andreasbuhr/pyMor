@@ -9,6 +9,8 @@ import numpy as np
 from pymor.grids.interfaces import ReferenceElementInterface
 from pymor.tools.quadratures import GaussQuadratures
 
+from pymor.python3compat import *
+
 
 class Point(ReferenceElementInterface):
 

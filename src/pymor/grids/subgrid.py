@@ -10,6 +10,8 @@ import numpy as np
 
 from pymor.grids.interfaces import AffineGridInterface
 
+from pymor.python3compat import *
+
 
 class SubGrid(AffineGridInterface):
     '''A subgrid of a |Grid|.

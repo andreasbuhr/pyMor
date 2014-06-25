@@ -38,7 +38,8 @@ documentation of :meth:`~Parametric.build_parameter_type` for details.)
 
 from __future__ import absolute_import, division, print_function
 
-from itertools import izip
+from pymor.python3compat import *
+
 from numbers import Number
 
 import numpy as np
@@ -78,7 +79,7 @@ class ParameterType(dict):
             t = t.parameter_type
         else:
             t = dict(t)
-            for k, v in t.iteritems():
+            for k, v in t.items():
                 if not isinstance(v, tuple):
                     assert isinstance(v, Number)
                     t[k] = tuple() if v == 0 else (v,)
@@ -280,7 +281,7 @@ class Parameter(dict):
         assert isinstance(mu, Parameter)
         if self.viewkeys() != mu.viewkeys():
             return False
-        elif not all(float_cmp_all(v, mu[k]) for k, v in self.iteritems()):
+        elif not all(float_cmp_all(v, mu[k]) for k, v in self.items()):
             return False
         else:
             return True
@@ -330,7 +331,7 @@ class Parameter(dict):
 
     @property
     def parameter_type(self):
-        return ParameterType({k: v.shape for k, v in self.iteritems()})
+        return ParameterType({k: v.shape for k, v in self.items()})
 
     @property
     def sid(self):

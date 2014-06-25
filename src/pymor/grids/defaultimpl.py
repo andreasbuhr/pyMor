@@ -10,6 +10,7 @@ from pymor.core.cache import cached
 from pymor.la.inverse import inv_transposed_two_by_two
 from pymor.tools.relations import inverse_relation
 
+from pymor.python3compat import *
 
 class ConformalTopologicalGridDefaultImplementations(object):
     '''Provides default informations for |ConformalTopologicalGrids|.'''
@@ -203,7 +204,7 @@ class AffineGridDefaultImplementations(object):
         if J.shape[-1] == J.shape[-2] == 2:
             JIT = inv_transposed_two_by_two(J)
         else:
-            JIT = np.array(map(np.linalg.pinv, J)).swapaxes(1, 2)
+            JIT = np.array(list(map(np.linalg.pinv, J))).swapaxes(1, 2)
         return JIT
 
     @cached

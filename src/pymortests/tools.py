@@ -7,6 +7,8 @@ from math import pow, factorial, sin, pi, exp
 import numpy as np
 import itertools
 
+from pymor.python3compat import *
+
 from pymortests.base import TestInterface, runmodule
 from pymor.tools.memory import total_size
 from pymor.tools.quadratures import GaussQuadratures
@@ -16,7 +18,7 @@ from pymor.tools.floatcmp import float_cmp
 class TestMemory(TestInterface):
 
     def test_positivity(self):
-        for Class in [int, float, long, complex, str, unicode, list, tuple, bytearray, ]:
+        for Class in [int, float, long, complex, str, type(u"nicode"), list, tuple, bytearray, ]:
             r = Class()
             self.assertGreater(total_size(r), 0)
 

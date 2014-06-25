@@ -98,7 +98,6 @@ import inspect
 import itertools
 import os
 import types
-from types import NoneType
 
 try:
     import contracts
@@ -167,7 +166,7 @@ class UberMeta(abc.ABCMeta):
         if 'init_arguments' in classdict:
             raise ValueError('init_arguments is a reserved class attribute for subclasses of BasicInterface')
 
-        for attr, item in classdict.items():
+        for attr, item in list(classdict.items()):
             if isinstance(item, types.FunctionType):
                 # first copy/fixup docs
                 item.__doc__ = decorators.fixup_docstring(item.__doc__)
@@ -222,7 +221,7 @@ class UberMeta(abc.ABCMeta):
         return c
 
 
-class BasicInterface(object):
+class BasicInterface(object,metaclass=UberMeta):
     '''Base class for most classes in pyMOR.
 
     Attributes
@@ -247,6 +246,9 @@ class BasicInterface(object):
 
     __metaclass__ = UberMeta
     _locked = False
+
+    def __init__(self):
+        pass
 
     def __setattr__(self, key, value):
         '''depending on _locked state I delegate the setattr call to object or
@@ -431,7 +433,7 @@ def _calculate_sid(obj, name):
             return tuple(_calculate_sid(o, '{}[{}]'.format(name, i)) for i, o in enumerate(obj))
         elif t_obj is dict:
             return tuple((k, _calculate_sid(v, '{}[{}]'.format(name, k))) for k, v in sorted(obj.iteritems()))
-        elif t_obj in (NoneType, str, int, float, bool):
+        elif t_obj in (type(None), str, int, float, bool):
             return obj
         elif t_obj is np.ndarray:
             if obj.size < 64:

@@ -7,6 +7,8 @@ from __future__ import absolute_import, division, print_function
 
 from numbers import Number
 
+from pymor.python3compat import *
+
 import numpy as np
 
 from pymor.core.interfaces import BasicInterface, abstractmethod, abstractproperty, abstractclassmethod
@@ -439,8 +441,8 @@ class VectorArrayInterface(BasicInterface):
     def check_ind(self, ind):
         '''Check if `ind` is an admissable list of indices in the sense of the class documentation.'''
         return (ind is None or
-                isinstance(ind, Number) and 0 <= ind < len(self) or
-                isinstance(ind, list) and (len(ind) == 0 or 0 <= min(ind) and max(ind) < len(self)) or
+                isinstance(ind, Integer) and 0 <= ind < len(self) or
+                isinstance(ind, (list,range)) and (len(ind) == 0 or 0 <= min(ind) and max(ind) < len(self)) or
                 (isinstance(ind, np.ndarray) and ind.ndim == 1
                  and (len(ind) == 0 or 0 <= np.min(ind) and np.max(ind) < len(self))))
 
@@ -448,7 +450,7 @@ class VectorArrayInterface(BasicInterface):
         '''Check if `ind` is an admissable list of unique indices in the sense of the class documentation.'''
         if (ind is None or isinstance(ind, Number) and 0 <= ind < len(self)):
             return True
-        elif isinstance(ind, list):
+        elif isinstance(ind, (list,range)):
             if len(ind) == 0:
                 return True
             s = set(ind)
@@ -463,7 +465,7 @@ class VectorArrayInterface(BasicInterface):
 
     def len_ind(self, ind):
         '''Return the number of specified indices.'''
-        return len(self) if ind is None else 1 if isinstance(ind, Number) else len(ind)
+        return len(self) if ind is None else 1 if isinstance(ind, Integer) else len(ind)
 
     def len_ind_unique(self, ind):
         '''Return the number of specified unique indices.'''

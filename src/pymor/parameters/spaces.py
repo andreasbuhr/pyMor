@@ -4,7 +4,9 @@
 
 from __future__ import absolute_import, division, print_function
 
-from itertools import izip, product
+from pymor.python3compat import *
+
+from itertools import product
 import numpy as np
 
 from pymor.parameters.base import Parameter, ParameterType
@@ -69,7 +71,7 @@ class CubicParameterSpace(ParameterSpaceInterface):
         ranges = self.ranges
         while count is None or c < count:
             yield Parameter(((k, np.random.uniform(ranges[k][0], ranges[k][1], shp))
-                             for k, shp in self.parameter_type.iteritems()))
+                             for k, shp in self.parameter_type.items()))
             c += 1
 
     def __str__(self):

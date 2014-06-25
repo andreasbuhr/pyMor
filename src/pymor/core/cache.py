@@ -189,7 +189,7 @@ class cached(object):
 
         key = (self.decorated_function.__name__, getattr(im_self, 'sid', im_self.uid),
                tuple(getattr(x, 'sid', x) for x in args),
-               tuple((k, getattr(v, 'sid', v)) for k, v in sorted(kwargs.iteritems())),
+               tuple((k, getattr(v, 'sid', v)) for k, v in sorted(kwargs.items())),
                defaults.sid)
         key = dumps(key)
         found, value = region.get(key)

@@ -77,7 +77,7 @@ class LimitedMemoryBackend(BasicInterface, dc.api.CacheBackend):
         '''
         self.logger.debug('LimitedMemoryBackend args {}'.format(pformat(argument_dict)))
         self._max_keys = argument_dict.get('max_keys', sys.maxsize)
-        self._max_bytes = argument_dict.get('max_kbytes', sys.maxint / 1024) * 1024
+        self._max_bytes = argument_dict.get('max_kbytes', 1024*1024*1024) * 1024
         self._cache = OrderedDict()
 
     def get(self, key):

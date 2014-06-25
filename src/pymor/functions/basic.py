@@ -6,7 +6,8 @@ from __future__ import absolute_import, division, print_function
 
 from numbers import Number
 
-from itertools import izip
+from pymor.python3compat import *
+
 import numpy as np
 
 from pymor.functions.interfaces import FunctionInterface

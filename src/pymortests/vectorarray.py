@@ -1,5 +1,8 @@
-from itertools import product, chain, izip
+from itertools import product, chain
 from numbers import Number
+
+from pymor.python3compat import *
+
 
 import pytest
 import numpy as np
@@ -43,12 +46,12 @@ def invalid_inds(v, length=None):
         length = 42
     if length > 0:
         yield [-1] + [0, ] * (length - 1)
-        yield range(length - 1) + [len(v)]
+        yield list(range(length - 1)) + [len(v)]
 
 
 def valid_inds(v, length=None):
     if length is None:
-        for ind in [None, [], range(len(v)), range(int(len(v)/2)), range(len(v)) * 2]:
+        for ind in [None, [], range(len(v)), range(int(len(v)/2)), list(range(len(v))) * 2]:
             yield ind
         length = 32
     if len(v) > 0:

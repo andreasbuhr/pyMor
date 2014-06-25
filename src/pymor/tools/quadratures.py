@@ -8,6 +8,8 @@ from itertools import chain
 
 import numpy as np
 
+from pymor.python3compat import *
+
 
 class GaussQuadratures(object):
     '''Gauss quadrature on the interval [0, 1]'''

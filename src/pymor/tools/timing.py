@@ -9,6 +9,7 @@ import functools
 
 from pymor.core.logger import getLogger
 
+from pymor.python3compat import *
 
 class Timer(object):
     '''You can use me as a context manager, plain instance or decorator to time execution

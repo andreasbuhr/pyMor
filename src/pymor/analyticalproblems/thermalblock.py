@@ -13,6 +13,7 @@ from pymor.domaindescriptions import RectDomain
 from pymor.functions import GenericFunction, ConstantFunction
 from pymor.parameters import CubicParameterSpace, ProjectionParameterFunctional
 
+from pymor.python3compat import *
 
 class ThermalBlockProblem(EllipticProblem, Unpicklable):
     '''Analytical description of a 2D thermal block diffusion problem.

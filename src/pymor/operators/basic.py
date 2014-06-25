@@ -22,7 +22,9 @@ consider deriving from :class:`OperatorBase`, :class:`AssemblableOperatorBase` o
 from __future__ import absolute_import, division, print_function
 
 from collections import OrderedDict
-from itertools import izip
+
+from pymor.python3compat import *
+
 from numbers import Number
 
 import numpy as np

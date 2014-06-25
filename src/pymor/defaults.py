@@ -13,7 +13,7 @@ from pymor.core import dumps
 from pymor.core.logger import getLogger
 
 
-_file_sha = hashlib.sha1(open(__file__).read()).digest()
+_file_sha = hashlib.sha1(open(__file__,'rb').read()).digest()
 
 
 class Defaults(object):
@@ -263,7 +263,7 @@ class Defaults(object):
             '''.format(self)
 
     def _calc_sid(self):
-        object.__setattr__(self, 'sid', dumps((_file_sha, tuple((k, v) for k, v in sorted(self.__dict__.iteritems())))))
+        object.__setattr__(self, 'sid', dumps((_file_sha, tuple((k, v) for k, v in sorted(self.__dict__.items())))))
 
     def _state_changed(self):
         self._calc_sid()

@@ -8,6 +8,7 @@ from pymor.core.interfaces import (BasicInterface, contract, abstractmethod)
 from pymor.core.cache import CacheableInterface, cached
 from pymor.core import interfaces
 
+import pymor.grids.boundaryinfos
 
 class BoundaryInterface(interfaces.BasicInterface):
     pass

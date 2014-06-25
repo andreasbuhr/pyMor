@@ -12,6 +12,8 @@ import pytest
 
 from pymor.grids import RectGrid, TriaGrid, OnedGrid, SubGrid
 
+from pymor.python3compat import *
+
 
 rect_grid_generators = [lambda arg=arg, kwargs=kwargs: RectGrid(arg, **kwargs) for arg, kwargs in
                         [((2, 4), {}),

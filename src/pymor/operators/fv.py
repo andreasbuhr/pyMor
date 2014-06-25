@@ -7,7 +7,8 @@
 
 from __future__ import absolute_import, division, print_function
 
-from itertools import izip
+from pymor.python3compat import *
+
 import numpy as np
 from scipy.sparse import coo_matrix, csc_matrix, dia_matrix
 
