@@ -246,7 +246,6 @@ class BasicInterface(object):
         Set of allowed keyword arguments for `with_`.
     '''
 
-    __metaclass__ = UberMeta
     _locked = False
 
     def __init__(self):
