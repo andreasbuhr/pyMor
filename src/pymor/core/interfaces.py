@@ -107,6 +107,7 @@ except ImportError:
 
 import numpy as np
 
+from pymor.python3compat import add_metaclass
 from pymor.core import decorators, backports, logger
 from pymor.core.exceptions import ConstError
 
@@ -221,7 +222,8 @@ class UberMeta(abc.ABCMeta):
         return c
 
 
-class BasicInterface(object,metaclass=UberMeta):
+@add_metaclass(UberMeta)
+class BasicInterface(object):
     '''Base class for most classes in pyMOR.
 
     Attributes
