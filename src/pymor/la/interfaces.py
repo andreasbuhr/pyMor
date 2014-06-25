@@ -442,7 +442,7 @@ class VectorArrayInterface(BasicInterface):
         '''Check if `ind` is an admissable list of indices in the sense of the class documentation.'''
         return (ind is None or
                 isinstance(ind, Integer) and 0 <= ind < len(self) or
-                isinstance(ind, (list,range)) and (len(ind) == 0 or 0 <= min(ind) and max(ind) < len(self)) or
+                isinstance(ind, (list,range_return_type)) and (len(ind) == 0 or 0 <= min(ind) and max(ind) < len(self)) or
                 (isinstance(ind, np.ndarray) and ind.ndim == 1
                  and (len(ind) == 0 or 0 <= np.min(ind) and np.max(ind) < len(self))))
 
@@ -450,7 +450,7 @@ class VectorArrayInterface(BasicInterface):
         '''Check if `ind` is an admissable list of unique indices in the sense of the class documentation.'''
         if (ind is None or isinstance(ind, Number) and 0 <= ind < len(self)):
             return True
-        elif isinstance(ind, (list,range)):
+        elif isinstance(ind, (list,range_return_type)):
             if len(ind) == 0:
                 return True
             s = set(ind)

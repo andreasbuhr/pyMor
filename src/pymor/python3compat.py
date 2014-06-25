@@ -14,6 +14,8 @@ except ImportError:
 
 Integer = (numbers.Integral, np.integer)
 
+range_return_type = type(range(1,2))
+
 def add_metaclass(metaclass):
     """Class decorator for creating a class with a metaclass."""
     def wrapper(cls):
