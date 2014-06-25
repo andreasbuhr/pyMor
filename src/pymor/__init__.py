@@ -77,7 +77,7 @@ except ImportError:
     import subprocess
     try:
         revstring = subprocess.check_output(['git', 'describe', '--tags', '--candidates', '20', '--match', '*.*.*'],
-                                            cwd=os.path.dirname(__file__))
+                                            cwd=os.path.dirname(__file__)).decode('utf-8')
     except subprocess.CalledProcessError as e:
         import sys
         sys.stderr.write('''Warning: Could not determine current pyMOR version.
