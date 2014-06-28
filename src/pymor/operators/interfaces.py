@@ -225,7 +225,7 @@ class OperatorInterface(ImmutableInterface, Parametric, Named):
         -------
         |LincombOperator| representing the linear combination.
         '''
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def projected(self, source_basis, range_basis, product=None, name=None):
