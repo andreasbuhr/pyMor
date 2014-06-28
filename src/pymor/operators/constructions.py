@@ -14,7 +14,7 @@ import numpy as np
 from pymor.la import VectorArrayInterface, NumpyVectorArray
 from pymor.operators.basic import OperatorBase
 from pymor.operators.interfaces import OperatorInterface
-
+from pymor.parameters import ParameterFunctionalInterface
 
 class Concatenation(OperatorBase):
     '''|Operator| representing the concatenation of two |Operators|.
@@ -307,3 +307,52 @@ class FixedParameterOperator(OperatorBase):
 
     def apply_inverse(self, U, ind=None, mu=None, options=None):
         self.operator.apply_inverse(U, ind=ind, mu=self.mu, options=options)
+
+
+class SelectionOperator(OperatorBase):
+    '''|Operator| representing one of many |Operators|.
+
+    Parameters
+    ----------
+    second
+        The |Operator| which is applied as second operator.
+    first
+        The |Operator| which is applied as first operator.
+    name
+        Name of the operator.
+    '''
+
+    def __init__(self, operators, parameterfunctional, name=None):
+        for op in operators:
+            assert isinstance(op, OperatorInterface)
+
+        assert isinstance(parameterfunctional,ParameterFunctionalInterface)
+        assert len(operators)
+
+        self.operators = operators
+        self.parameterfunctional = parameterfunctional
+        self.build_parameter_type(inherits=operators)
+
+        firstoperator = next(iter(operators))
+        self.dim_source = firstoperator.dim_source
+        self.dim_range = firstoperator.dim_range
+        self.type_source = firstoperator.type_source
+        self.type_range = firstoperator.type_range
+
+        for op in operators:
+            assert self.dim_source == firstoperator.dim_source
+            assert self.dim_range == firstoperator.dim_range
+            assert self.type_source == firstoperator.type_source
+            assert self.type_range == firstoperator.type_range
+
+        self.linear = all([x.linear for x in operators])
+        
+        # do something about restricted here?
+        self.name = name
+
+    def apply(self, U, ind=None, mu=None):
+        mu = self.parse_parameter(mu)
+        operator_number = int(self.parameterfunctional.evaluate(mu))
+        return self.operators[operator_number].apply(U,ind=ind, mu=mu)
+
+
