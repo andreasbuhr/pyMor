@@ -310,16 +310,7 @@ class FixedParameterOperator(OperatorBase):
 
 
 class SelectionOperator(OperatorBase):
-    '''|Operator| representing one of many |Operators|.
-
-    Parameters
-    ----------
-    second
-        The |Operator| which is applied as second operator.
-    first
-        The |Operator| which is applied as first operator.
-    name
-        Name of the operator.
+    ''' document me
     '''
 
     def __init__(self, operators, parameterfunctional, name=None):
