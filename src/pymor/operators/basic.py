@@ -527,7 +527,7 @@ class NumpyMatrixOperator(NumpyMatrixBasedOperator):
         default_options = self.invert_options
 
         if options is None:
-            options = default_options.values()[0]
+            options = next(iter(default_options.values()))
         elif isinstance(options, str):
             options = default_options[options]
         else:

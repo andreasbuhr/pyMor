@@ -151,7 +151,7 @@ class ParameterType(dict):
         if isinstance(d, ParameterType):
             dict.update(self, d)
         else:
-            for k, v in d.iteritems():
+            for k, v in d.items():
                 self[k] = v
 
     def __str__(self):
@@ -203,7 +203,7 @@ class Parameter(dict):
     def __init__(self, v):
         if v is None:
             v = {}
-        i = v.iteritems() if hasattr(v, 'iteritems') else v
+        i = v.items() if hasattr(v, 'items') else v
         dict.__init__(self, {k: np.array(v) if not isinstance(v, np.ndarray) else v for k, v in i})
 
     @classmethod
@@ -251,7 +251,7 @@ class Parameter(dict):
         elif set(mu.keys()) != set(parameter_type.keys()):
             raise ValueError('Provided parameter with keys {} does not match parameter type {}.'
                              .format(mu.keys(), parameter_type))
-        for k, v in mu.iteritems():
+        for k, v in mu.items():
             if not isinstance(v, np.ndarray):
                 v = np.array(v)
                 try:
@@ -291,7 +291,7 @@ class Parameter(dict):
         self.__keys = None
 
     def copy(self):
-        c = Parameter({k: v.copy() for k, v in self.iteritems()})
+        c = Parameter({k: v.copy() for k, v in self.items()})
         if self.__keys is not None:
             c.__keys = list(self.__keys)
         return c
@@ -310,9 +310,9 @@ class Parameter(dict):
     def __eq__(self, mu):
         if not isinstance(mu, Parameter):
             mu = Parameter(mu)
-        if self.viewkeys() != mu.viewkeys():
+        if set(self.keys()) != set(mu.keys()):
             return False
-        elif not all(np.array_equal(v, mu[k]) for k, v in self.iteritems()):
+        elif not all(np.array_equal(v, mu[k]) for k, v in self.items()):
             return False
         else:
             return True

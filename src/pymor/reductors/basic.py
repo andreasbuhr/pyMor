@@ -71,16 +71,16 @@ def reduce_generic_rb(discretization, RB, operator_product=None, vector_product=
         RB = discretization.type_solution.empty(discretization.dim_solution)
 
     projected_operators = {k: op.projected(source_basis=RB, range_basis=RB, product=operator_product) if op else None
-                           for k, op in discretization.operators.iteritems()}
+                           for k, op in discretization.operators.items()}
     projected_functionals = {k: f.projected(source_basis=RB, range_basis=None, product=operator_product) if f else None
-                             for k, f in discretization.functionals.iteritems()}
+                             for k, f in discretization.functionals.items()}
     projected_vector_operators = {k: (op.projected(source_basis=None, range_basis=RB, product=vector_product) if op
                                       else None)
-                                  for k, op in discretization.vector_operators.iteritems()}
+                                  for k, op in discretization.vector_operators.items()}
 
     if discretization.products is not None:
         projected_products = {k: p.projected(source_basis=RB, range_basis=RB)
-                              for k, p in discretization.products.iteritems()}
+                              for k, p in discretization.products.items()}
     else:
         projected_products = None
 

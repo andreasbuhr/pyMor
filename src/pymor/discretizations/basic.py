@@ -24,7 +24,7 @@ class DiscretizationBase(DiscretizationInterface):
         self.operators = FrozenDict(operators)
         self.functionals = FrozenDict(functionals)
         self.vector_operators = FrozenDict(vector_operators)
-        self.linear = all(op is None or op.linear for op in chain(operators.itervalues(), functionals.itervalues()))
+        self.linear = all(op is None or op.linear for op in chain(operators.values(), functionals.values()))
         self.products = products
         self.estimator = estimator
         self.visualizer = visualizer
@@ -32,7 +32,7 @@ class DiscretizationBase(DiscretizationInterface):
         self.name = name
 
         if products:
-            for k, v in products.iteritems():
+            for k, v in products.items():
                 setattr(self, '{}_product'.format(k), v)
                 setattr(self, '{}_norm'.format(k), induced_norm(v))
         if estimator is not None:
@@ -121,8 +121,8 @@ class StationaryDiscretization(DiscretizationBase):
         assert set(kwargs.keys()) <= self.with_arguments
         assert 'operators' not in kwargs or 'operator' not in kwargs
         assert 'operators' not in kwargs or 'rhs' not in kwargs
-        assert 'operators' not in kwargs or kwargs['operators'].keys() == ['operator']
-        assert 'functionals' not in kwargs or kwargs['functionals'].keys() == ['rhs']
+        assert 'operators' not in kwargs or set(kwargs['operators'].keys()) == {'operator'}
+        assert 'functionals' not in kwargs or set(kwargs['functionals'].keys()) == {'rhs'}
         assert 'vector_operators' not in kwargs or not kwargs['vector_operators'].keys()
 
         if 'operators' in kwargs:

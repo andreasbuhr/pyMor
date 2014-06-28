@@ -13,6 +13,7 @@ from pymor.core import getLogger
 from pymor.core.exceptions import AccuracyError
 from pymor.tools import float_cmp_all
 
+from pymor.python3compat import *
 
 def gram_schmidt(A, product=None, tol=None, offset=0, find_duplicates=None,
                  reiterate=None, reiteration_threshold=None, check=None, check_tol=None,
