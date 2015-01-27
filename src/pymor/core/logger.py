@@ -29,16 +29,6 @@ COLORS = {
     'ERROR':    RED
 }
 
-LOGLEVEL_MAPPING = {
-    'debug':     logging.DEBUG,
-    'info':      logging.INFO,
-    'error':     logging.ERROR,
-    'warn':      logging.WARN,
-    'warning':   logging.WARNING,
-    'critical':  logging.CRITICAL,
-    'fatal':     logging.FATAL,
-}
-
 FORMAT = '%(asctime)s$BOLD%(levelname)s|$BOLD%(name)s$RESET: %(message)s'
 MAX_HIERACHY_LEVEL = 3
 
@@ -103,16 +93,36 @@ class ColoredFormatter(logging.Formatter):
         return logging.Formatter.format(self, record)
 
 
-def getLogger(module, level=None, filename=None, handler_cls=logging.StreamHandler):
+@defaults('filename')
+def getLogger(module, level=None, filename=''):
+    """Get the logger of the respective module for pyMOR's logging facility.
+
+    Parameters
+    ----------
+    module
+        Name of the module.
+    level
+        If set, `logger.setLevel(level)` is called (see
+        :meth:`~logging.Logger.setLevel`).
+    filename
+        If not empty, path of an existing file where everything logged will be
+        written to.
+    """
     module = 'pymor' if module == '__main__' else module
     logger = logging.getLogger(module)
-    streamhandler = handler_cls()
+    streamhandler = logging.StreamHandler()
     streamformatter = ColoredFormatter()
     streamhandler.setFormatter(streamformatter)
-    logger.handlers = [streamhandler]
+    handlers = [streamhandler]
+    if filename:
+        filehandler = logging.FileHandler(filename)
+        fileformatter = ColoredFormatter()
+        filehandler.setFormatter(fileformatter)
+        handlers.append(filehandler)
+    logger.handlers = handlers
     logger.propagate = False
     if level:
-        logger.setLevel(LOGLEVEL_MAPPING[level])
+        logger.setLevel(level)
     return logger
 
 
@@ -147,7 +157,15 @@ dummy_logger = DummyLogger()
 
 
 @defaults('levels')
-def set_log_levels(levels={'pymor': 'WARN',
-                           'pymor.core': 'WARN'}):
+def set_log_levels(levels={'pymor': 'INFO'}):
+    """Set log levels for pyMOR's logging facility.
+
+    Parameters
+    ----------
+    levels
+        Dict of log levels. Keys names of loggers (see :func:`logging.getLogger`),
+        values are the log levels to set for the loggers of the given names
+        (see :meth:`~logging.Logger.setLevel`).
+    """
     for k, v in levels.items():
         getLogger(k).setLevel(v)

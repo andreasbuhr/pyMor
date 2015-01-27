@@ -7,8 +7,8 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 
 from pymor.algorithms.timestepping import ExplicitEulerTimeStepper
-from pymor.discretizations import InstationaryDiscretization
-from pymor.grids import OnedGrid
+from pymor.discretizations.basic import InstationaryDiscretization
+from pymor.grids.oned import OnedGrid
 from pymor.gui.qt import Matplotlib1DVisualizer
 from pymor.la.pod import pod
 from pymor.operators.constructions import VectorFunctional, LincombOperator
@@ -16,11 +16,7 @@ from pymor.parameters.spaces import CubicParameterSpace
 from pymor.reductors.basic import reduce_generic_rb
 
 # import wrapped classes
-from wrapper import WrappedDiffusionOperator, WrappedVectorArray, WrappedVector
-
-# configure logging
-from pymor.core import getLogger
-getLogger('pymor.discretizations').setLevel('INFO')
+from wrapper import WrappedDiffusionOperator
 
 
 def discretize(n, nt, blocks):
@@ -32,7 +28,7 @@ def discretize(n, nt, blocks):
     initial_data = operator.source.zeros()
 
     # use data property of WrappedVector to setup rhs
-    # note that we cannot use the data property of WrappedVectorArray,
+    # note that we cannot use the data property of ListVectorArray,
     # since ListVectorArray will always return a copy
     rhs_vec = operator.range.zeros()
     rhs_data = rhs_vec._list[0].data
