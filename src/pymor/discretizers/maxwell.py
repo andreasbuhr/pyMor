@@ -92,18 +92,31 @@ class NedelecVisualizer(PatchVisualizer):
         self.evaluation_operator = CenterEvaluation(grid)
 
     def visualize(self, U, discretization, title=None, legend=None, separate_colorbars=False,
-                  rescale_colorbars=False, block=None, filename=None, columns=2):
+                  rescale_colorbars=False, block=None, filename=None, columns=2, what="norm"):
+        assert what in ["norm", "x", "y", "all"]
+        if not isinstance(U,tuple):
+            U = tuple([U])
+        assert (isinstance(U, tuple) and all(isinstance(u, VectorArrayInterface) for u in U))
 
+        def x_part(U):
+            return NumpyVectorArray(self.evaluation_operator.apply(U).data.ravel()[0::2])
+        def y_part(U):
+            return NumpyVectorArray(self.evaluation_operator.apply(U).data.ravel()[1::2])
         def center_norm(U):
             return NumpyVectorArray(np.linalg.norm(self.evaluation_operator.apply(U).data.ravel().reshape((-1, 2)),
                                                    axis=1))
 
-        assert isinstance(U, VectorArrayInterface) \
-            or (isinstance(U, tuple) and all(isinstance(u, VectorArrayInterface) for u in U))
-        if isinstance(U, tuple):
-            U = tuple(center_norm(u) for u in U)
+        if what == "norm":
+            processing_function = center_norm
+        elif what == "x":
+            processing_function = x_part
+        elif what == "y":
+            processing_function = y_part
+
+        if what == "all":
+            U = tuple(fun(u) for fun in [center_norm, x_part, y_part] for u in U)
         else:
-            U = center_norm(U)
+            U = tuple(processing_function(u) for u in U)
 
         super(NedelecVisualizer, self).visualize(U, discretization, title=title, legend=legend,
                                                  separate_colorbars=separate_colorbars,
