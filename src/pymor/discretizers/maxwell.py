@@ -67,12 +67,15 @@ def discretize_maxwell(analytical_problem, diameter=None, domain_discretizer=Non
 
     p = analytical_problem
 
-    rotrot_op = RotRotOperator(grid, boundary_info)
-    l2_op = L2ProductOperator(grid, boundary_info)
-    op = LincombOperator([rotrot_op, l2_op],
-                         [ExpressionParameterFunctional('1./mu', {'mu': tuple()}),
-                          ExpressionParameterFunctional('- eps * w**2', {'eps': tuple(), 'w': tuple()})])
+    aff_op = RotRotOperator(grid, boundary_info, coefficient=0.)
+    rotrot_op = RotRotOperator(grid, boundary_info, dirichlet_clear_diag=True)
+    l2_op = L2ProductOperator(grid, boundary_info, dirichlet_clear_diag=True)
+    op = LincombOperator([aff_op, rotrot_op, l2_op],
+                         [1.,
+                          ExpressionParameterFunctional('1./mu', {'mu': tuple()}),
+                          ExpressionParameterFunctional('- eps * omega**2', {'eps': tuple(), 'omega': tuple()})])
     rhs = L2ProductFunctional(grid, p.excitation, boundary_info=boundary_info, dirichlet_data=p.dirichlet_data)
+#    rhs = LincombOperator([rhs],[ExpressionParameterFunctional("- omega", {"omega": tuple()})])
     l2_product = L2ProductOperator(grid, EmptyBoundaryInfo(grid))
     visualizer = NedelecVisualizer(grid)
 
@@ -99,12 +102,14 @@ class NedelecVisualizer(PatchVisualizer):
         assert (isinstance(U, tuple) and all(isinstance(u, VectorArrayInterface) for u in U))
 
         def x_part(U):
-            return NumpyVectorArray(self.evaluation_operator.apply(U).data.ravel()[0::2])
+            return NumpyVectorArray(self.evaluation_operator.apply(U).data[:,0::2])
         def y_part(U):
-            return NumpyVectorArray(self.evaluation_operator.apply(U).data.ravel()[1::2])
+            return NumpyVectorArray(self.evaluation_operator.apply(U).data[:,1::2])
         def center_norm(U):
-            return NumpyVectorArray(np.linalg.norm(self.evaluation_operator.apply(U).data.ravel().reshape((-1, 2)),
-                                                   axis=1))
+            num_vectors = len(U)
+            return NumpyVectorArray(np.linalg.norm(self.evaluation_operator.apply(U).data.reshape((num_vectors, -1, 2)),
+                                                   axis=2))
+
 
         if what == "norm":
             processing_function = center_norm
