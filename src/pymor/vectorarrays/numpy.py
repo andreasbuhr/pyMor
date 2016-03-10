@@ -67,11 +67,12 @@ class NumpyVectorArray(VectorArrayInterface):
 
     @classmethod
     def make_array(cls, subtype=None, count=0, reserve=0):
-        assert isinstance(subtype, Number)
+        assert isinstance(subtype[0], Number)
+        assert isinstance(subtype[1], np.dtype)
         assert count >= 0
         assert reserve >= 0
         va = cls(np.empty((0, 0)))
-        va._array = np.zeros((max(count, reserve), subtype))
+        va._array = np.zeros((max(count, reserve), subtype[0]), dtype=subtype[1])
         va._len = count
         return va
 
@@ -84,12 +85,18 @@ class NumpyVectorArray(VectorArrayInterface):
 
     @property
     def subtype(self):
-        return self._array.shape[1]
+        return (self._array.shape[1], self._array.dtype)
 
     @property
     def dim(self):
         return self._array.shape[1]
+        
+    def conj(self):
+        if self._refcount[0] > 1:
+            self._deep_copy()
 
+        self._array[:self._len] = np.conj(self._array[:self._len])
+        
     def copy(self, ind=None, deep=False):
         assert self.check_ind(ind)
 
@@ -417,6 +424,6 @@ class NumpyVectorArray(VectorArrayInterface):
         self._refcount = [1]              # create new reference counter
 
 
-def NumpyVectorSpace(dim):
+def NumpyVectorSpace(dim, dtype=np.dtype('float64')):
     """Shorthand for |VectorSpace| `(NumpyVectorArray, dim)`."""
-    return VectorSpace(NumpyVectorArray, dim)
+    return VectorSpace(NumpyVectorArray, (dim, dtype))

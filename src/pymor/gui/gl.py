@@ -90,6 +90,7 @@ if HAVE_ALL:
             assert grid.dim == 2
             assert codim in (0, 2)
             super(GLPatchWidget, self).__init__(parent)
+            self.needcomplexupdate = False
             self.setMinimumSize(300, 300)
             self.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding))
 
@@ -194,6 +195,23 @@ if HAVE_ALL:
                 self.vertex_data['position'][num_entities * 3:, 0:2] = VERTEX_POS[:, [0, 2, 3], :].reshape((-1, 2))
             self.update_vbo = True
             self.update()
+
+        def set_withcomplex(self, U, vmin=None, vmax=None):
+            if not U.dtype == np.dtype('complex128'):
+                self.needcomplexupdate = False
+                self.set(U, vmin, vmax)
+                return
+                
+            self.U = U
+            self.phase = 0
+            self.needcomplexupdate = True
+            self.set(np.real(U * np.exp( - 1j * self.phase)), vmin, vmax)
+            
+        def complexupdate(self):
+            if not self.needcomplexupdate:
+                return
+            self.phase += 2. * np.pi / 20.
+            self.set(np.real(self.U * np.exp( - 1j * self.phase)), self.vmin, self.vmax)
 
         def set(self, U, vmin=None, vmax=None):
             self.vmin = self.vmin if vmin is None else vmin

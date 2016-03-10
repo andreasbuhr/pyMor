@@ -120,11 +120,11 @@ class NumpyMatrixBasedOperator(OperatorBase):
             else:
                 return self._assembled_operator
         elif not self.parameter_type:
-            op = self._assembled_operator = NumpyMatrixOperator(self._assemble(), solver_options=self.solver_options)
+            op = self._assembled_operator = NumpyMatrixOperator(self._assemble(), solver_options=self.solver_options, source=self.source, range=self.range)
             self._defaults_sid = defaults_sid()
             return op
         else:
-            return NumpyMatrixOperator(self._assemble(self.parse_parameter(mu)), solver_options=self.solver_options)
+            return NumpyMatrixOperator(self._assemble(self.parse_parameter(mu)), solver_options=self.solver_options, source=self.source, range=self.range)
 
     def apply(self, U, ind=None, mu=None):
         return self.assemble(mu).apply(U, ind=ind)
@@ -179,12 +179,13 @@ class NumpyMatrixOperator(NumpyMatrixBasedOperator):
         Name of the operator.
     """
 
-    def __init__(self, matrix, solver_options=None, name=None):
+    def __init__(self, matrix, source=None, range=None, solver_options=None, name=None):
         assert matrix.ndim <= 2
         if matrix.ndim == 1:
             matrix = np.reshape(matrix, (1, -1))
-        self.source = NumpyVectorSpace(matrix.shape[1])
-        self.range = NumpyVectorSpace(matrix.shape[0])
+        self.source = source if source is not None else NumpyVectorSpace(matrix.shape[1], matrix.dtype)
+        self.range = range if range is not None else NumpyVectorSpace(matrix.shape[0], matrix.dtype)
+
         self.solver_options = solver_options
         self.name = name
         self._matrix = matrix
@@ -311,6 +312,9 @@ class NumpyMatrixOperator(NumpyMatrixBasedOperator):
     def assemble_lincomb(self, operators, coefficients, solver_options=None, name=None):
         if not all(isinstance(op, (NumpyMatrixOperator, ZeroOperator, IdentityOperator)) for op in operators):
             return None
+            
+        assert all(op.range == operators[0].range for op in operators)
+        assert all(op.source == operators[0].source for op in operators)
 
         if coefficients[0] == 1:
             matrix = operators[0]._matrix.copy()
@@ -342,7 +346,7 @@ class NumpyMatrixOperator(NumpyMatrixBasedOperator):
                     matrix += (op._matrix * c)
                 except NotImplementedError:
                     matrix = matrix + (op._matrix * c)
-        return NumpyMatrixOperator(matrix, solver_options=solver_options)
+        return NumpyMatrixOperator(matrix, solver_options=solver_options, source=operators[0].source, range=operators[0].range)
 
     def __getstate__(self):
         if hasattr(self._matrix, 'factorization'):  # remove unplicklable SuperLU factorization
@@ -777,7 +781,9 @@ def _apply_inverse(matrix, V, options=None):
         options = default_options[user_options['type']]
         options.update(user_options)
 
-    R = np.empty((len(V), matrix.shape[1]))
+    R = np.empty((len(V), matrix.shape[1]), dtype=matrix.dtype)
+    if V.dtype == np.complex128 and matrix.dtype == np.float64:
+        matrix = type(matrix)(matrix, dtype=np.complex128)
 
     if options['type'] == 'solve':
         for i, VV in enumerate(V):
@@ -818,7 +824,10 @@ def _apply_inverse(matrix, V, options=None):
                 if hasattr(matrix, 'factorization'):
                     R = matrix.factorization.solve(V.T).T
                 elif options['keep_factorization']:
+                    import time
+                    starttime = time.time()
                     matrix.factorization = splu(matrix, permc_spec=options['permc_spec'])
+                    print("did matrix factorization of {} in {}".format(matrix.shape, time.time() - starttime))
                     R = matrix.factorization.solve(V.T).T
                 else:
                     R = spsolve(matrix, V.T, permc_spec=options['permc_spec']).T

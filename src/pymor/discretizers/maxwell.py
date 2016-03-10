@@ -7,18 +7,22 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
+import scipy
 
 from pymor.analyticalproblems.maxwell import MaxwellProblem
 from pymor.discretizations.basic import StationaryDiscretization
 from pymor.domaindiscretizers.default import discretize_domain_default
 from pymor.grids.boundaryinfos import EmptyBoundaryInfo
 from pymor.gui.qt import PatchVisualizer
-from pymor.operators.nedelec import RotRotOperator, L2ProductOperator, L2ProductFunctional, CenterEvaluation
+from pymor.operators.nedelec import RotRotOperator, L2ProductOperator, L2ProductFunctional, CenterEvaluation, SimpleOpenBoundaryOperator
+from pymor.operators.numpy import NumpyMatrixOperator
 from pymor.operators.constructions import LincombOperator
 from pymor.parameters.functionals import ExpressionParameterFunctional
 from pymor.vectorarrays.interfaces import VectorArrayInterface
 from pymor.vectorarrays.numpy import NumpyVectorArray
 
+
+mu_null = 4*np.pi*1e-7
 
 def discretize_maxwell(analytical_problem, diameter=None, domain_discretizer=None,
                        grid=None, boundary_info=None):
@@ -70,19 +74,28 @@ def discretize_maxwell(analytical_problem, diameter=None, domain_discretizer=Non
     aff_op = RotRotOperator(grid, boundary_info, coefficient=0.)
     rotrot_op = RotRotOperator(grid, boundary_info, dirichlet_clear_diag=True)
     l2_op = L2ProductOperator(grid, boundary_info, dirichlet_clear_diag=True)
-    op = LincombOperator([aff_op, rotrot_op, l2_op],
-                         [1.,
-                          ExpressionParameterFunctional('1./mu', {'mu': tuple()}),
-                          ExpressionParameterFunctional('- eps * omega**2', {'eps': tuple(), 'omega': tuple()})])
+    operators = [aff_op, rotrot_op, l2_op]
+    functionals = [1.,
+        1./mu_null,
+        ExpressionParameterFunctional('- 8.854187817e-12 *omega**2', {'omega': tuple()})]
+    
+    if p.robin_data:
+        open_boundary_op = SimpleOpenBoundaryOperator(grid, boundary_info, p.robin_data, name="Robin")
+        operators.append(open_boundary_op)
+        fun = ExpressionParameterFunctional('- 1j * omega ', {'omega': tuple()})
+        functionals.append(fun)
+        
+    op = LincombOperator(operators, functionals)
     rhs = L2ProductFunctional(grid, p.excitation, boundary_info=boundary_info, dirichlet_data=p.dirichlet_data)
-#    rhs = LincombOperator([rhs],[ExpressionParameterFunctional("- omega", {"omega": tuple()})])
+    rhs = LincombOperator([rhs], [ExpressionParameterFunctional('- 1j * omega ', {'omega': tuple()})])
+
     l2_product = L2ProductOperator(grid, EmptyBoundaryInfo(grid))
     visualizer = NedelecVisualizer(grid)
 
     parameter_space = p.parameter_space if hasattr(p, 'parameter_space') else None
 
     discretization = StationaryDiscretization(op, rhs, products={'l2': l2_product}, visualizer=visualizer,
-                                              parameter_space=parameter_space, name=p.name)
+                                              parameter_space=parameter_space, name=p.name, dofcodim=1)
 
     return discretization, {'grid': grid, 'boundary_info': boundary_info}
 
@@ -107,8 +120,9 @@ class NedelecVisualizer(PatchVisualizer):
             return NumpyVectorArray(self.evaluation_operator.apply(U).data[:,1::2])
         def center_norm(U):
             num_vectors = len(U)
-            return NumpyVectorArray(np.linalg.norm(self.evaluation_operator.apply(U).data.reshape((num_vectors, -1, 2)),
-                                                   axis=2))
+            thedata = self.evaluation_operator.apply(U).data.reshape((num_vectors, -1, 2))
+            normed = np.linalg.norm(np.real(thedata), axis=2) + 1j*np.linalg.norm(np.imag(thedata), axis=2)
+            return NumpyVectorArray(normed)
 
 
         if what == "norm":
@@ -119,7 +133,7 @@ class NedelecVisualizer(PatchVisualizer):
             processing_function = y_part
 
         if what == "all":
-            U = tuple(fun(u) for fun in [center_norm, x_part, y_part] for u in U)
+            U = tuple(fun(u) for fun in [x_part, y_part] for u in U)
         else:
             U = tuple(processing_function(u) for u in U)
 

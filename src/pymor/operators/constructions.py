@@ -524,9 +524,9 @@ class VectorArrayOperator(OperatorBase):
         self._array = array.copy()
         if transposed:
             self.source = array.space
-            self.range = NumpyVectorSpace(len(array))
+            self.range = NumpyVectorSpace(len(array), array.space.subtype[1])
         else:
-            self.source = NumpyVectorSpace(len(array))
+            self.source = NumpyVectorSpace(len(array), array.space.subtype[1])
             self.range = array.space
         self.transposed = transposed
         self.name = name
@@ -947,7 +947,13 @@ class InducedNorm(ImmutableInterface, Parametric):
         self.build_parameter_type(inherits=(product,))
 
     def __call__(self, U, mu=None):
-        norm_squared = self.product.pairwise_apply2(U, U, mu=mu)
+        if U.data.dtype == np.complex128:
+            Uc = U.copy(deep=True)
+            Uc.conj()
+            norm_squared = self.product.pairwise_apply2(U, Uc, mu=mu)
+        else:
+            norm_squared = self.product.pairwise_apply2(U, U, mu=mu)
+
         if self.tol > 0:
             norm_squared = np.where(np.logical_and(0 > norm_squared, norm_squared > - self.tol),
                                     0, norm_squared)

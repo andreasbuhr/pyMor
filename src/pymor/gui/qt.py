@@ -41,6 +41,17 @@ from pymor.tools.vtkio import HAVE_PYVTK, write_vtk
 from pymor.vectorarrays.interfaces import VectorArrayInterface
 from pymor.vectorarrays.numpy import NumpyVectorArray
 
+def mymin(a):
+    if not a.dtype == np.dtype('complex128'):
+        return np.min(a)
+        
+    return - np.max(np.abs(a))
+
+def mymax(a):
+    if not a.dtype == np.dtype('complex128'):
+        return np.max(a)
+        
+    return np.max(np.abs(a))
 
 if HAVE_PYSIDE:
 
@@ -131,6 +142,11 @@ if HAVE_PYSIDE:
                 layout.addLayout(hlayout)
                 self.a_save.triggered.connect(self.save)
 
+            self.complextimer = QTimer()
+            self.complextimer.setInterval(100)
+            self.complextimer.timeout.connect(self.complexupdate)
+            self.complextimer.start()
+
             self.setLayout(layout)
             self.plot = plot
             self.U = U
@@ -142,6 +158,9 @@ if HAVE_PYSIDE:
         def speed_changed(self, val):
             self.timer.setInterval(val * 20)
 
+        def complexupdate(self):
+            self.plot.complexupdate()
+        
         def update_solution(self):
             ind = self.slider.value() + 1
             if ind >= self.length:
@@ -198,7 +217,7 @@ def _launch_qt_app(main_window_factory, block):
         main_window.show()
         app.exec_()
 
-    if block:
+    if True:
         doit()
     else:
         p = multiprocessing.Process(target=doit)
@@ -303,18 +322,18 @@ def visualize_patch(grid, U, bounding_box=([0, 0], [1, 1]), codim=2, title=None,
                     super(PlotWidget, self).__init__()
                     if separate_colorbars:
                         if rescale_colorbars:
-                            self.vmins = tuple(np.min(u[0]) for u in U)
-                            self.vmaxs = tuple(np.max(u[0]) for u in U)
+                            self.vmins = tuple(mymin(u[0]) for u in U)
+                            self.vmaxs = tuple(mymax(u[0]) for u in U)
                         else:
-                            self.vmins = tuple(np.min(u) for u in U)
-                            self.vmaxs = tuple(np.max(u) for u in U)
+                            self.vmins = tuple(mymin(u) for u in U)
+                            self.vmaxs = tuple(mymax(u) for u in U)
                     else:
                         if rescale_colorbars:
-                            self.vmins = (min(np.min(u[0]) for u in U),) * len(U)
-                            self.vmaxs = (max(np.max(u[0]) for u in U),) * len(U)
+                            self.vmins = (min(mymin(u[0]) for u in U),) * len(U)
+                            self.vmaxs = (max(mymax(u[0]) for u in U),) * len(U)
                         else:
-                            self.vmins = (min(np.min(u) for u in U),) * len(U)
-                            self.vmaxs = (max(np.max(u) for u in U),) * len(U)
+                            self.vmins = (min(mymin(u) for u in U),) * len(U)
+                            self.vmaxs = (max(mymax(u) for u in U),) * len(U)
 
                     layout = QHBoxLayout()
                     plot_layout = QGridLayout()
@@ -353,18 +372,22 @@ def visualize_patch(grid, U, bounding_box=([0, 0], [1, 1]), codim=2, title=None,
                     self.setLayout(layout)
                     self.plots = plots
 
+                def complexupdate(self):
+                    for plot in self.plots:
+                        plot.complexupdate()
+                
                 def set(self, U, ind):
                     if rescale_colorbars:
                         if separate_colorbars:
-                            self.vmins = tuple(np.min(u[ind]) for u in U)
-                            self.vmaxs = tuple(np.max(u[ind]) for u in U)
+                            self.vmins = tuple(mymin(u[ind]) for u in U)
+                            self.vmaxs = tuple(mymax(u[ind]) for u in U)
                         else:
-                            self.vmins = (min(np.min(u[ind]) for u in U),) * len(U)
-                            self.vmaxs = (max(np.max(u[ind]) for u in U),) * len(U)
+                            self.vmins = (min(mymin(u[ind]) for u in U),) * len(U)
+                            self.vmaxs = (max(mymax(u[ind]) for u in U),) * len(U)
 
                     for u, plot, colorbar, vmin, vmax in izip(U, self.plots, self.colorbarwidgets, self.vmins,
                                                               self.vmaxs):
-                        plot.set(u[ind], vmin=vmin, vmax=vmax)
+                        plot.set_withcomplex(u[ind], vmin=vmin, vmax=vmax)
                         colorbar.set(vmin=vmin, vmax=vmax)
 
             super(MainWindow, self).__init__(U, PlotWidget(), title=title, length=len(U[0]))
