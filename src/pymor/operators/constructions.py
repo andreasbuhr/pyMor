@@ -20,7 +20,7 @@ from pymor.operators.interfaces import OperatorInterface
 from pymor.parameters.base import Parametric
 from pymor.parameters.interfaces import ParameterFunctionalInterface
 from pymor.vectorarrays.interfaces import VectorArrayInterface, VectorSpace
-from pymor.vectorarrays.numpy import NumpyVectorArray, NumpyVectorSpace
+from pymor.vectorarrays.numpy import NumpyVectorArray, NumpyVectorSpace, _complex_dtypes
 
 
 class LincombOperator(OperatorBase):
@@ -38,6 +38,7 @@ class LincombOperator(OperatorBase):
     """
 
     def __init__(self, operators, coefficients, solver_options=None, name=None):
+        operators, coefficients = zip(*[(o, c) for o, c in zip(operators,coefficients) if o is not None])
         assert len(operators) > 0
         assert len(operators) == len(coefficients)
         assert all(isinstance(op, OperatorInterface) for op in operators)
@@ -85,34 +86,34 @@ class LincombOperator(OperatorBase):
             R.axpy(c, op.apply(U, ind=ind, mu=mu))
         return R
 
-    def apply2(self, V, U, U_ind=None, V_ind=None, mu=None, product=None):
+    def apply2(self, V, U, U_ind=None, V_ind=None, mu=None, product=None, conjugate=None):
         if hasattr(self, '_assembled_operator'):
             if self._defaults_sid == defaults_sid():
-                return self._assembled_operator.apply2(V, U, V_ind=V_ind, U_ind=U_ind, product=product)
+                return self._assembled_operator.apply2(V, U, V_ind=V_ind, U_ind=U_ind, product=product, conjugate=conjugate)
             else:
-                return self.assemble().apply2(V, U, V_ind=V_ind, U_ind=U_ind, product=product)
+                return self.assemble().apply2(V, U, V_ind=V_ind, U_ind=U_ind, product=product, conjugate=conjugate)
         elif self._try_assemble:
-            return self.assemble().apply2(V, U, V_ind=V_ind, U_ind=U_ind, product=product)
+            return self.assemble().apply2(V, U, V_ind=V_ind, U_ind=U_ind, product=product, conjugate=conjugate)
         coeffs = self.evaluate_coefficients(mu)
-        R = self.operators[0].apply2(V, U, V_ind=V_ind, U_ind=U_ind, mu=mu, product=product)
+        R = self.operators[0].apply2(V, U, V_ind=V_ind, U_ind=U_ind, mu=mu, product=product, conjugate=conjugate)
         R *= coeffs[0]
         for op, c in izip(self.operators[1:], coeffs[1:]):
-            R += c * op.apply2(V, U, V_ind=V_ind, U_ind=U_ind, mu=mu, product=product)
+            R += c * op.apply2(V, U, V_ind=V_ind, U_ind=U_ind, mu=mu, product=product, conjugate=conjugate)
         return R
 
-    def pairwise_apply2(self, V, U, U_ind=None, V_ind=None, mu=None, product=None):
+    def pairwise_apply2(self, V, U, U_ind=None, V_ind=None, mu=None, product=None, conjugate=None):
         if hasattr(self, '_assembled_operator'):
             if self._defaults_sid == defaults_sid():
-                return self._assembled_operator.pairwise_apply2(V, U, V_ind=V_ind, U_ind=U_ind, product=product)
+                return self._assembled_operator.pairwise_apply2(V, U, V_ind=V_ind, U_ind=U_ind, product=product, conjugate=conjugate)
             else:
-                return self.assemble().pairwise_apply2(V, U, V_ind=V_ind, U_ind=U_ind, product=product)
+                return self.assemble().pairwise_apply2(V, U, V_ind=V_ind, U_ind=U_ind, product=product, conjugate=conjugate)
         elif self._try_assemble:
-            return self.assemble().pairwise_apply2(V, U, V_ind=V_ind, U_ind=U_ind, product=product)
+            return self.assemble().pairwise_apply2(V, U, V_ind=V_ind, U_ind=U_ind, product=product, conjugate=conjugate)
         coeffs = self.evaluate_coefficients(mu)
-        R = self.operators[0].pairwise_apply2(V, U, V_ind=V_ind, U_ind=U_ind, mu=mu, product=product)
+        R = self.operators[0].pairwise_apply2(V, U, V_ind=V_ind, U_ind=U_ind, mu=mu, product=product, conjugate=conjugate)
         R *= coeffs[0]
         for op, c in izip(self.operators[1:], coeffs[1:]):
-            R += c * op.pairwise_apply2(V, U, V_ind=V_ind, U_ind=U_ind, mu=mu, product=product)
+            R += c * op.pairwise_apply2(V, U, V_ind=V_ind, U_ind=U_ind, mu=mu, product=product, conjugate=conjugate)
         return R
 
     def apply_adjoint(self, U, ind=None, mu=None, source_product=None, range_product=None):
@@ -563,7 +564,7 @@ class VectorArrayOperator(OperatorBase):
                 U = U.copy(ind)
             return self._array.lincomb(U.data)
         else:
-            return NumpyVectorArray(U.dot(self._array, ind=ind), copy=False)
+            return NumpyVectorArray(U.dot(self._array, ind=ind, conjugate=True), copy=False)
 
     def apply_adjoint(self, U, ind=None, mu=None, source_product=None, range_product=None):
         assert U in self.range
@@ -990,7 +991,16 @@ class InducedNorm(ImmutableInterface, Parametric):
         self.build_parameter_type(inherits=(product,))
 
     def __call__(self, U, ind=None, mu=None):
-        norm_squared = self.product.pairwise_apply2(U, U, U_ind=ind, V_ind=ind, mu=mu)
+        if U.data.dtype in _complex_dtypes:
+            norm_squared = self.product.pairwise_apply2(U, U, U_ind=ind, V_ind=ind, mu=mu, conjugate=True)
+            if (np.linalg.norm(norm_squared.imag) / np.linalg.norm(norm_squared.real) > 1e-12
+            and np.linalg.norm(norm_squared.imag) > 1e-12):
+                raise ValueError('norm is complex (square = {})'.format(norm_squared))
+                
+            norm_squared = norm_squared.real
+        else:
+            norm_squared = self.product.pairwise_apply2(U, U, U_ind=ind, V_ind=ind, mu=mu, conjugate=True)
+        
         if self.tol > 0:
             norm_squared = np.where(np.logical_and(0 > norm_squared, norm_squared > - self.tol),
                                     0, norm_squared)

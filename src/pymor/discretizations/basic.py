@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # This file is part of the pyMOR project (http://www.pymor.org).
-# Copyright 2013-2016 pyMOR developers and contributors. All rights reserved.
+# Copyright Holders: Rene Milk, Stephan Rave, Felix Schindler
 # License: BSD 2-Clause License (http://opensource.org/licenses/BSD-2-Clause)
 
 from __future__ import absolute_import, division, print_function
@@ -114,7 +114,7 @@ class StationaryDiscretization(DiscretizationBase):
     """
 
     def __init__(self, operator=None, rhs=None, products=None, operators=None, functionals=None, vector_operators=None,
-                 parameter_space=None, estimator=None, visualizer=None, cache_region=None, name=None):
+                 parameter_space=None, estimator=None, visualizer=None, cache_region=None, name=None, dofcodim=None):
         functionals = functionals or {}
         operators = operators or {}
         vector_operators = vector_operators or {}
@@ -142,6 +142,7 @@ class StationaryDiscretization(DiscretizationBase):
         self.rhs = rhs
         self.build_parameter_type(inherits=(operator, rhs))
         self.parameter_space = parameter_space
+        self.dofcodim = dofcodim
 
     def with_(self, **kwargs):
         assert set(kwargs.keys()) <= self.with_arguments

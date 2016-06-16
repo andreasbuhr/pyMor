@@ -14,6 +14,8 @@ from pymor.core.logger import getLogger
 from pymor.parallel.dummy import dummy_pool
 from pymor.parallel.manager import RemoteObjectManager
 
+from pymor.vectorarrays.numpy import _complex_dtypes
+from pymor.operators.constructions import induced_norm
 
 def greedy(discretization, reductor, samples, initial_basis=None, use_estimator=True, error_norm=None,
            extension_algorithm=gram_schmidt_basis_extension, atol=None, rtol=None, max_extensions=None,
@@ -153,6 +155,10 @@ def greedy(discretization, reductor, samples, initial_basis=None, use_estimator=
                 U = discretization.solve(max_err_mu)
             with logger.block('Extending basis with solution snapshot ...'):
                 try:
+                    if U.data.dtype in _complex_dtypes:
+                        Ur = U.real
+                        Ur.append(U.imag)
+                        U = Ur
                     basis, extension_data = extension_algorithm(basis, U)
                 except ExtensionError:
                     logger.info('Extension failed. Stopping now.')

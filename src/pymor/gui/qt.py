@@ -1,6 +1,9 @@
 # This file is part of the pyMOR project (http://www.pymor.org).
-# Copyright 2013-2016 pyMOR developers and contributors. All rights reserved.
+# Copyright Holders: Rene Milk, Stephan Rave, Felix Schindler
 # License: BSD 2-Clause License (http://opensource.org/licenses/BSD-2-Clause)
+#
+# Contributors: Andreas Buhr <andreas@andreasbuhr.de>
+#               Michael Schaefer <michael.schaefer@uni-muenster.de>
 
 """ This module provides a few methods and classes for visualizing data
 associated to grids. We use the `PySide <http://www.pyside.org>`_ bindings
@@ -32,12 +35,23 @@ from pymor.core.interfaces import BasicInterface
 from pymor.core.logger import getLogger
 from pymor.grids.oned import OnedGrid
 from pymor.grids.referenceelements import triangle, square
-from pymor.gui.gl import GLPatchWidget, ColorBarWidget, HAVE_GL, HAVE_QTOPENGL
+from pymor.gui.gl import GLPatchWidget, ColorBarWidget, HAVE_GL
 from pymor.gui.matplotlib import Matplotlib1DWidget, MatplotlibPatchWidget, HAVE_MATPLOTLIB
 from pymor.tools.vtkio import HAVE_PYVTK, write_vtk
 from pymor.vectorarrays.interfaces import VectorArrayInterface
 from pymor.vectorarrays.numpy import NumpyVectorArray
 
+def mymin(a):
+    if not a.dtype == np.dtype('complex128'):
+        return np.min(a)
+        
+    return - np.max(np.abs(a))
+
+def mymax(a):
+    if not a.dtype == np.dtype('complex128'):
+        return np.max(a)
+        
+    return np.max(np.abs(a))
 
 if HAVE_PYSIDE:
 
@@ -128,6 +142,11 @@ if HAVE_PYSIDE:
                 layout.addLayout(hlayout)
                 self.a_save.triggered.connect(self.save)
 
+            self.complextimer = QTimer()
+            self.complextimer.setInterval(100)
+            self.complextimer.timeout.connect(self.complexupdate)
+            self.complextimer.start()
+
             self.setLayout(layout)
             self.plot = plot
             self.U = U
@@ -139,6 +158,9 @@ if HAVE_PYSIDE:
         def speed_changed(self, val):
             self.timer.setInterval(val * 20)
 
+        def complexupdate(self):
+            self.plot.complexupdate()
+        
         def update_solution(self):
             ind = self.slider.value() + 1
             if ind >= self.length:
@@ -195,16 +217,28 @@ def _launch_qt_app(main_window_factory, block):
         main_window.show()
         app.exec_()
 
-    import sys
-    if block and not getattr(sys, '_called_from_test', False):
+    if True:
         doit()
     else:
         p = multiprocessing.Process(target=doit)
         p.start()
         _launch_qt_app_pids.add(p.pid)
+        if block:
+            p.join()
 
 
 def stop_gui_processes():
+    for p in multiprocessing.active_children():
+        if p.pid in _launch_qt_app_pids:
+            p.terminate()
+
+    waited = 0
+    while any(p.pid in _launch_qt_app_pids for p in multiprocessing.active_children()):
+        time.sleep(1)
+        waited += 1
+        if waited == 5:
+            break
+
     for p in multiprocessing.active_children():
         if p.pid in _launch_qt_app_pids:
             try:
@@ -258,15 +292,7 @@ def visualize_patch(grid, U, bounding_box=([0, 0], [1, 1]), codim=2, title=None,
 
     if backend == 'gl':
         if not HAVE_GL:
-            logger = getLogger('pymor.gui.qt.visualize_patch')
-            logger.warn('import of PyOpenGL failed, falling back to matplotlib; rendering will be slow')
-            backend = 'matplotlib'
-        elif not HAVE_QTOPENGL:
-            logger = getLogger('pymor.gui.qt.visualize_patch')
-            logger.warn('import of PySide.QtOpenGL failed, falling back to matplotlib; rendering will be slow')
-            backend = 'matplotlib'
-        if backend == 'matplotlib' and not HAVE_MATPLOTLIB:
-            raise ImportError('cannot visualize: import of matplotlib failed')
+            raise ImportError('cannot visualize: import of PyOpenGL failed')
     else:
         if not HAVE_MATPLOTLIB:
             raise ImportError('cannot visualize: import of matplotlib failed')
@@ -278,17 +304,14 @@ def visualize_patch(grid, U, bounding_box=([0, 0], [1, 1]), codim=2, title=None,
             assert isinstance(U, VectorArrayInterface) and hasattr(U, 'data') \
                 or (isinstance(U, tuple) and all(isinstance(u, VectorArrayInterface) and hasattr(u, 'data') for u in U)
                     and all(len(u) == len(U[0]) for u in U))
-            U = (U.data.astype(np.float64, copy=False),) if hasattr(U, 'data') else \
-                tuple(u.data.astype(np.float64, copy=False) for u in U)
+            U = (U.data,) if hasattr(U, 'data') else tuple(u.data for u in U)
             if isinstance(legend, str):
                 legend = (legend,)
             assert legend is None or isinstance(legend, tuple) and len(legend) == len(U)
             if backend == 'gl':
                 widget = GLPatchWidget
-                cbar_widget = ColorBarWidget
             else:
                 widget = MatplotlibPatchWidget
-                cbar_widget = None
                 if not separate_colorbars and len(U) > 1:
                     l = getLogger('pymor.gui.qt.visualize_patch')
                     l.warn('separate_colorbars=False not supported for matplotlib backend')
@@ -299,22 +322,22 @@ def visualize_patch(grid, U, bounding_box=([0, 0], [1, 1]), codim=2, title=None,
                     super(PlotWidget, self).__init__()
                     if separate_colorbars:
                         if rescale_colorbars:
-                            self.vmins = tuple(np.min(u[0]) for u in U)
-                            self.vmaxs = tuple(np.max(u[0]) for u in U)
+                            self.vmins = tuple(mymin(u[0]) for u in U)
+                            self.vmaxs = tuple(mymax(u[0]) for u in U)
                         else:
-                            self.vmins = tuple(np.min(u) for u in U)
-                            self.vmaxs = tuple(np.max(u) for u in U)
+                            self.vmins = tuple(mymin(u) for u in U)
+                            self.vmaxs = tuple(mymax(u) for u in U)
                     else:
                         if rescale_colorbars:
-                            self.vmins = (min(np.min(u[0]) for u in U),) * len(U)
-                            self.vmaxs = (max(np.max(u[0]) for u in U),) * len(U)
+                            self.vmins = (min(mymin(u[0]) for u in U),) * len(U)
+                            self.vmaxs = (max(mymax(u[0]) for u in U),) * len(U)
                         else:
-                            self.vmins = (min(np.min(u) for u in U),) * len(U)
-                            self.vmaxs = (max(np.max(u) for u in U),) * len(U)
+                            self.vmins = (min(mymin(u) for u in U),) * len(U)
+                            self.vmaxs = (max(mymax(u) for u in U),) * len(U)
 
                     layout = QHBoxLayout()
                     plot_layout = QGridLayout()
-                    self.colorbarwidgets = [cbar_widget(self, vmin=vmin, vmax=vmax) if cbar_widget else None
+                    self.colorbarwidgets = [ColorBarWidget(self, vmin=vmin, vmax=vmax)
                                             for vmin, vmax in izip(self.vmins, self.vmaxs)]
                     plots = [widget(self, grid, vmin=vmin, vmax=vmax, bounding_box=bounding_box, codim=codim)
                              for vmin, vmax in izip(self.vmins, self.vmaxs)]
@@ -329,8 +352,7 @@ def visualize_patch(grid, U, bounding_box=([0, 0], [1, 1]), codim=2, title=None,
                             else:
                                 hlayout = QHBoxLayout()
                                 hlayout.addWidget(plot)
-                                if colorbar:
-                                    hlayout.addWidget(colorbar)
+                                hlayout.addWidget(colorbar)
                                 subplot_layout.addLayout(hlayout)
                             plot_layout.addLayout(subplot_layout, int(i/columns), (i % columns), 1, 1)
                     else:
@@ -340,8 +362,7 @@ def visualize_patch(grid, U, bounding_box=([0, 0], [1, 1]), codim=2, title=None,
                             else:
                                 hlayout = QHBoxLayout()
                                 hlayout.addWidget(plot)
-                                if colorbar:
-                                    hlayout.addWidget(colorbar)
+                                hlayout.addWidget(colorbar)
                                 plot_layout.addLayout(hlayout, int(i/columns), (i % columns), 1, 1)
                     layout.addLayout(plot_layout)
                     if not separate_colorbars:
@@ -351,20 +372,23 @@ def visualize_patch(grid, U, bounding_box=([0, 0], [1, 1]), codim=2, title=None,
                     self.setLayout(layout)
                     self.plots = plots
 
+                def complexupdate(self):
+                    for plot in self.plots:
+                        plot.complexupdate()
+                
                 def set(self, U, ind):
                     if rescale_colorbars:
                         if separate_colorbars:
-                            self.vmins = tuple(np.min(u[ind]) for u in U)
-                            self.vmaxs = tuple(np.max(u[ind]) for u in U)
+                            self.vmins = tuple(mymin(u[ind]) for u in U)
+                            self.vmaxs = tuple(mymax(u[ind]) for u in U)
                         else:
-                            self.vmins = (min(np.min(u[ind]) for u in U),) * len(U)
-                            self.vmaxs = (max(np.max(u[ind]) for u in U),) * len(U)
+                            self.vmins = (min(mymin(u[ind]) for u in U),) * len(U)
+                            self.vmaxs = (max(mymax(u[ind]) for u in U),) * len(U)
 
                     for u, plot, colorbar, vmin, vmax in izip(U, self.plots, self.colorbarwidgets, self.vmins,
                                                               self.vmaxs):
-                        plot.set(u[ind], vmin=vmin, vmax=vmax)
-                        if colorbar:
-                            colorbar.set(vmin=vmin, vmax=vmax)
+                        plot.set_withcomplex(u[ind], vmin=vmin, vmax=vmax)
+                        colorbar.set(vmin=vmin, vmax=vmax)
 
             super(MainWindow, self).__init__(U, PlotWidget(), title=title, length=len(U[0]))
             self.grid = grid

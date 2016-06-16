@@ -99,7 +99,9 @@ class RotRotOperator(NumpyMatrixBasedOperator):
         self.logger.info('Assemble system matrix ...')
         A = coo_matrix((M, (SF_I0, SF_I1)), shape=(g.size(1), g.size(1)))
         del M, SF_I0, SF_I1
-        A = csc_matrix(A).copy()
+        A = csc_matrix(A)
+        A.eliminate_zeros()
+        A = A.copy()
 
         # The call to copy() is necessary to resize the data arrays of the sparse matrix:
         # During the conversion to crs_matrix, entries corresponding with the same
@@ -212,7 +214,9 @@ class L2ProductOperator(NumpyMatrixBasedOperator):
         self.logger.info('Assemble system matrix ...')
         A = coo_matrix((M, (SF_I0, SF_I1)), shape=(g.size(1), g.size(1)))
         del M, SF_I0, SF_I1
-        A = csc_matrix(A).copy()
+        A = csc_matrix(A)
+        A.eliminate_zeros()
+        A = A.copy()
 
         # The call to copy() is necessary to resize the data arrays of the sparse matrix:
         # During the conversion to crs_matrix, entries corresponding with the same
@@ -352,3 +356,52 @@ class CenterEvaluation(NumpyMatrixBasedOperator):
         # Thus, the original data array is not deleted and all memory stays allocated.
 
         return A
+
+
+class SimpleOpenBoundaryOperator(NumpyMatrixBasedOperator):
+    """Simple linear diagonal operator for linear
+    relationship between voltage and current. 
+    Equivalend of 1/R
+    
+    A factor of '- i omega' has to be added later
+    
+    Parameters
+    ----------
+    grid
+        The |Grid| over which to assemble the operator
+    boundary_info
+        |BoundaryInfo| for the treatment of Dirichlet boundary conditions
+    robin_data
+        A |Function| that represent the Robin parameter.
+        If `None`, the resulting operator is zero.
+    name
+        Name of the operator
+    """
+
+    sparse = True
+
+    def __init__(self, grid, boundary_info, robin_data=None,  name=None):
+        assert robin_data is None or isinstance(robin_data, FunctionInterface) and robin_data.dim_domain == grid.dim_outer and robin_data.shape_range == tuple()
+        self.source = self.range = NumpyVectorSpace(grid.size(grid.dim-1))
+        self.grid = grid
+        self.boundary_info = boundary_info
+        self.robin_data = robin_data
+        self.name = name
+        if robin_data is not None:
+            self.build_parameter_type(inherits=(robin_data,))
+
+    def _assemble(self, mu=None):
+        g = self.grid
+        bi = self.boundary_info
+
+        if not g.dim == 2:
+            raise NotImplementedError
+
+        if bi is None or not bi.has_robin or self.robin_data is None:
+            return coo_matrix((g.size(1), g.size(1))).tocsc()
+
+        OI = bi.robin_boundaries(1)
+        xref = g.centers(1)[OI]
+        robin_c = self.robin_data(xref, mu=mu)
+        I = coo_matrix((robin_c, (OI, OI)), shape=(g.size(1), g.size(1)))
+        return csc_matrix(I).copy()
