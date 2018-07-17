@@ -8,16 +8,27 @@ import pytest
 from pymor.algorithms.basic import almost_equal
 from pymor.algorithms.projection import project
 from pymor.core.exceptions import InversionError, LinAlgError
-from pymor.operators.constructions import SelectionOperator, InverseOperator, InverseTransposeOperator
+from pymor.operators.constructions import SelectionOperator, InverseOperator, InverseTransposeOperator, VectorArrayOperator
 from pymor.parameters.base import ParameterType
 from pymor.parameters.functionals import GenericParameterFunctional
-from pymor.vectorarrays.numpy import NumpyVectorArray
+from pymor.vectorarrays.numpy import NumpyVectorArray, NumpyVectorSpace
 from pymortests.algorithms.stuff import MonomOperator
 from pymortests.fixtures.operator import (operator, operator_with_arrays, operator_with_arrays_and_products,
                                           picklable_operator)
 from pymortests.pickling import assert_picklable, assert_picklable_without_dumps_function
 from pymortests.vectorarray import valid_inds, valid_inds_of_same_length, invalid_inds
 from pymor.core.config import is_windows_platform
+
+def test_vector_array_op():
+    myspace = NumpyVectorSpace(5)
+    operatorvecs = myspace.from_numpy(np.random.normal(size=(3,5)) + 1j*np.random.normal(size=(3,5)))
+
+    othervecs = myspace.from_numpy(np.random.normal(size=(4,5)) + 1j*np.random.normal(size=(4,5)))
+
+    result1 = VectorArrayOperator(operatorvecs).apply_transpose(othervecs)
+    result2 = VectorArrayOperator(operatorvecs, transposed=True).apply(othervecs)
+
+    assert np.linalg.norm((result1 - result2).to_numpy()) < 1e-10
 
 def test_selection_op():
     p1 = MonomOperator(1)
